@@ -1,0 +1,37 @@
+<html>
+<head>
+    <!-- set this as conditional import -->
+    <script src="js/jquery.js"></script>
+    <script src="js/arbor.js"></script>
+    <script src="js/arbor-tween.js"></script>
+
+    <script src="js/main.js"></script>
+</head>
+
+<body>
+  <div id="leftDiv" style="float:left;">
+    <label>Character Name:</label>
+    <input id="charName"/><br/>
+
+    <label>Actor Name:</label>
+    <select id="actorNameDropdown" class="nameDropdown"></select>
+    <input id="actorName"/><br/>
+
+    <label>Franchise:</label>
+    <select id="franchiseNameDropdown" class="nameDropdown"/>
+    <input id="franchiseName"/>
+    <input id="submitButton" type="button" value="Submit!"/>
+  </div>
+
+  <div id="rightDiv" style="float:right;">
+    <label>Repulsion:</label>
+    <span id="repulsionValue">1000</span>
+    <input id="repulsionUpButton" type="button" value="Up"/>
+    <input id="repulsionDownButton" type="button" value="Down"/>
+  </div>
+<br/>
+
+  <canvas id="viewport" width="1200" height="750"></canvas>
+</body>
+
+</html>
