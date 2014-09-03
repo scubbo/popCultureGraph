@@ -4,6 +4,7 @@ window.START_NODE_WIDTH = 3;
 window.START_EDGE_WIDTH = 1;
 window.SELECTION_HIGHLIGHT_TRANSITION_TIME = 0.5
 window.SELECTION_HIGHLIGHT_TIME = 2000;
+window.NOT_CONNECTED = 99999;
 
 (function($){
 
@@ -113,10 +114,11 @@ window.SELECTION_HIGHLIGHT_TIME = 2000;
             var pos = $(canvas).offset();
             _mouseP = arbor.Point(e.pageX-pos.left, e.pageY-pos.top)
             nearest = particleSystem.nearest(_mouseP)
-            if (!nearest.node) return false
-
-            withinRange = nearest.distance < nearest.node.data.w // This is a HORRIBLE hack and there should be a better way
-            markNodeSelected(nearest.node, !!withinRange);
+            if (nearest != null && !nearest.node) return false
+            if (nearest != null) {
+              withinRange = nearest.distance < nearest.node.data.w // This is a HORRIBLE hack and there should be a better way
+              markNodeSelected(nearest.node, !!withinRange);
+            }
           },
           clicked:function(e){
             var pos = $(canvas).offset();
@@ -176,120 +178,145 @@ window.SELECTION_HIGHLIGHT_TIME = 2000;
   }    
 
   $(document).ready(function(){
-    fillInDropdown('actor');
-    fillInDropdown('franchise');
 
     var sys = arbor.ParticleSystem(1000, 600, 0.5) // create the system with sensible repulsion/stiffness/friction
     window.sys = sys // make global
     sys.parameters({gravity:true}) // use center-gravity to make the graph settle nicely (ymmv)
     sys.renderer = Renderer("#viewport") // our newly created renderer will have its .init() method called shortly by sys...
 
-    $('#submitButton').click(submitButtonAction);
-    $('#repulsionUpButton').click(function(){adjustRepulsion(10)});
-    $('#repulsionDownButton').click(function(){adjustRepulsion(-10)});
-
-    $('.nameDropdown').change(temporarilyHighlightNode);
+    $('#submitButton').click(function() {
+      resetDataAndGraph();
+      addStartingNodes()
+    });
 
 
     // add some nodes to the graph and watch it go...
+    resetDataAndGraph();
 
-    $.post('cgi-bin/getAll.py', function(resp){
-      data = resp['data']
-      $.each(data, function(index, elem) {
-        if (!(sys.getNode('actor_'+elem.actorId))) {
-          sys.addNode('actor_'+elem.actorId, {color:'#f00',name:elem.actorName,originalColor:'#f00',originalW:window.START_NODE_WIDTH,edges:[],neighbours:[]})
-        }
-
-        if (!(sys.getNode('franchise_'+elem.franchiseId))) {
-          sys.addNode('franchise_'+elem.franchiseId, {color:'#00f',name:elem.franchiseName,originalColor:'#00f',originalW:window.START_NODE_WIDTH,edges:[],neighbours:[]})
-        }
-
-        edge = sys.addEdge('actor_' + elem.actorId, 'franchise_' + elem.franchiseId, {name:elem.charName,originalW:window.START_EDGE_WIDTH});
-        node1 = sys.getNode('actor_' + elem.actorId)
-        node2 = sys.getNode('franchise_' + elem.franchiseId)
-        node1.data.edges[node1.data.edges.length] = edge
-        node2.data.edges[node2.data.edges.length] = edge
-        node1.data.neighbours[node1.data.neighbours.length] = node2
-        node2.data.neighbours[node2.data.neighbours.length] = node1
-      });
-    });
+    $('.nodeName').keydown(nodeNameKeyDown);
 
   })
 
 })(this.jQuery)
 
-function fillInDropdown(tableName) {
-  var dropdown = $('#' + tableName + 'NameDropdown');
-  dropdown.append('<option value="0">Please select...</option>');
-  $.post('cgi-bin/get.py', {'requestTable':tableName + 's', 'sortByName':'true'}, function(response) {
-    $.each(response['data'], function(index, elem) {
-      dropdown.append('<option value="' + elem['id'] + '">' + elem['name'] + '</option>');
-    });
-    dropdown.append('<option value="-1">Add new...</option>');
+function resetDataAndGraph() {
+  window.actors = {}
+  window.titles = {}
+  window.rootActors = []
+  window.sys.eachNode(function(node,pt) {
+    window.sys.pruneNode(node);
+  })
+}
+
+function addStartingNodes() {
+  firstNodeNameGuess = $('#firstNodeName').val()
+  secondNodeNameGuess = $('#secondNodeName').val()
+  getRootNodeData(firstNodeNameGuess, 0)
+  getRootNodeData(secondNodeNameGuess, 1)
+}
+
+function getRootNodeData(nameGuess, rootNodeValue) {
+  console.log('getting Root Node Data for ' + nameGuess)
+  $.post('cgi-bin/getActorIdFromName.py',{'nameGuess':nameGuess},
+    function(data) {
+      window.rootActors[rootNodeValue] = data
+      if (window.rootActors.length == 2) {
+        placeRootNodes()
+        proliferate(window.rootActors[0].id);
+        proliferate(window.rootActors[1].id);
+      }
+    }
+  )
+}
+
+function placeRootNodes() {
+  console.log('placing root nodes')
+  for (var i = 0; i<window.rootActors.length; i++) {
+    data = window.rootActors[i]
+    var actorName = data['name']
+    var actorId = data['id']
+    window.sys.addNode('actor_'+actorId, {color:'#f00',name:actorName,originalColor:'#f00',originalW:3,edges:[]})
+    var actorDetails = {}
+    actorDetails['name'] = actorName
+    actorDetails['d' + i.toString()] = 0
+    actorDetails['d' + (1-i).toString()] = window.NOT_CONNECTED
+    actorDetails['active'] = true
+    window.actors[actorId] = actorDetails
+  }
+}
+
+function nodeNameKeyDown(e) {
+  targetElem = e.target
+  if (65 <= e.which && e.which <= 90) {
+    currentLetter = e.shiftKey ? String.fromCharCode(e.which) : String.fromCharCode(e.which).toLowerCase();
+    currentVal = $(targetElem).val() + currentLetter;
+  }
+  //TODO: Use this for predictions
+}
+
+//TODO: Make this generalised, taking title or actor
+function proliferate(actorId) {
+  console.log('proliferating');
+  $.post('cgi-bin/getShowsForActor.py',
+    {'actorId':actorId},
+    function(data) {
+      newTitleNodesToAdd = []
+
+      for (var index = 0; index<data.length; index++) {
+        elem = data[index]
+        if (window.titles[elem.titleId] == undefined) {
+          title = {'title':elem.title}
+          title['d0'] = window.NOT_CONNECTED
+          title['d1'] = window.NOT_CONNECTED
+          title['active'] = false
+          title['links'] = [{'actorId':actorId,'charName':elem.charName}]
+          window.titles[elem.titleId] = title
+        } else {
+          window.titles[elem.titleId]['links'].push({'actorId':actorId,'charName':elem.charName})
+        }
+        window.titles[elem.titleId]['d0'] = Math.min(window.titles[elem.titleId]['d0'], window.actors[actorId]['d0'] + 1)
+        window.titles[elem.titleId]['d1'] = Math.min(window.titles[elem.titleId]['d1'], window.actors[actorId]['d1'] + 1)
+        if (window.titles[elem.titleId]['d0'] != window.NOT_CONNECTED && window.titles[elem.titleId]['d1'] != window.NOT_CONNECTED) {
+          newTitleNodesToAdd.push(elem);
+        }
+      };
+
+      addTitleNodes(newTitleNodesToAdd);
+
+    }
+  );
+}
+
+function addTitleNodes(listOfTitleNodes) {
+  var i = 0;
+
+  function addTitleNodesInner() {
+    if (i<listOfTitleNodes.length) {
+      setTimeout(function() {
+        addTitleNode(listOfTitleNodes[i]);
+        i++;
+        addTitleNodesInner();
+      }, 300+Math.floor(Math.random()*200)); //TODO: Randomise pop=up interval
+    }
+  }
+
+  addTitleNodesInner();
+  
+}
+
+function addTitleNode(title) {
+  window.titles[title.titleId]['active'] = true
+  nodeId = 'title_'+title.titleId;
+  window.sys.addNode(nodeId, {color:'#0f0',name:title.title,originalColor:'#0f0',originalW:3,edges:[]})
+  $.each(window.titles[title.titleId]['links'], function(index, linkElem) {
+    edge = window.sys.addEdge(nodeId,'actor_'+linkElem.actorId,{name:linkElem.charName})
+    window.sys.getNode(nodeId).data.edges.push(edge);
+    window.sys.getNode('actor_'+linkElem.actorId).data.edges.push(edge);
   });
 }
 
-function submitButtonAction() {
-  actorNameDropdownValue = $('#actorNameDropdown').val();
-  franchiseNameDropdownValue = $('#franchiseNameDropdown').val();
-  if (actorNameDropdownValue == 0 || franchiseNameDropdownValue == 0) {
-    alert('You need to select an actor and a franchise!');
-    return false;
-  }
-
-  newCharData = {};
-  newCharData['charName'] = $('#charName').val();
-  $('#charName').val('');
-  if ($('#actorNameDropdown').val() == -1) {
-    actorName = $('#actorName').val();
-    if (actorName == '') {
-      alert('Please enter an Actor\'s name!');
-      return false;
-    }
-    newCharData['actorName'] = actorName;
-  } else {
-    newCharData['actorId'] = $('#actorNameDropdown').val();
-  }
-  $('#actorName').val('');
-  $('#actorNameDropdown').val(0)
-
-  if ($('#franchiseNameDropdown').val() == -1) {
-    newCharData['franchiseName'] = $('#franchiseName').val();
-  } else {
-    newCharData['franchiseId'] = $('#franchiseNameDropdown').val();
-  }
-  $('#franchiseName').val('');
-  $('#franchiseNameDropdown').val(0);
-
-  $.post('cgi-bin/add.py', newCharData, function(response) {
-    console.log(response);
-  });
-
-  if (newCharData.franchiseId && newCharData.actorId) {
-    franchiseNode = window.sys.getNode('franchise_' + newCharData.franchiseId)
-    actorNode = window.sys.getNode('actor_' + newCharData.actorId)
-    if (franchiseNode && actorNode) {
-      edge = window.sys.addEdge('franchise_' + newCharData.franchiseId, 'actor_' + newCharData.actorId, {})
-      franchiseNode.data.edges[franchiseNode.data.edges.length] = edge
-      actorNode.data.edges[actorNode.data.edges.length] = edge
-    }
-  }
-
-}
-
-function adjustRepulsion(value) {
-  var initialParams = window.sys.parameters();
-  initialParams.repulsion += value;
-  window.sys.parameters(initialParams);
-  $('#repulsionValue').html(initialParams.repulsion.toString())
-}
-
-function temporarilyHighlightNode(e) {
-  target = $(e.currentTarget)
-  targetId = target[0].id
-  nodeToHighlight = targetId.replace('NameDropdown','') + '_' + target.val()
-
-  node = window.sys.getNode(nodeToHighlight)
+function temporarilyHighlightNode(targetId) {
+  node = window.sys.getNode(targetId)
   mainNodePreHighlightWidth = parseInt(node.data.w != undefined ? node.data.w : node.data.originalW)
   mainNodePostHighlightWidth = parseInt(mainNodePreHighlightWidth) + 10
   window.sys.tweenNode(node, window.SELECTION_HIGHLIGHT_TRANSITION_TIME, {w:mainNodePostHighlightWidth});
