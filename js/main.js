@@ -5,6 +5,7 @@ window.START_EDGE_WIDTH = 1;
 window.SELECTION_HIGHLIGHT_TRANSITION_TIME = 0.5
 window.SELECTION_HIGHLIGHT_TIME = 2000;
 window.NOT_CONNECTED = 99999;
+window.MAXIMUM_DEGREE = 1;
 
 (function($){
 
@@ -185,6 +186,13 @@ window.NOT_CONNECTED = 99999;
     sys.renderer = Renderer("#viewport") // our newly created renderer will have its .init() method called shortly by sys...
 
     $('#submitButton').click(function() {
+      maxDegree = $('#maximumDegreesDropdown').val();
+      if (maxDegree > 2) {
+        alert('Sorry! Degrees above 2 are not currently supported!');
+        return false;
+      } else {
+        window.MAXIMUM_DEGREE = maxDegree;
+      }
       resetDataAndGraph();
       addStartingNodes()
     });
@@ -222,8 +230,8 @@ function getRootNodeData(nameGuess, rootNodeValue) {
       window.rootActors[rootNodeValue] = data
       if (window.rootActors.length == 2) {
         placeRootNodes()
-        proliferate(window.rootActors[0].id);
-        proliferate(window.rootActors[1].id);
+        proliferate(window.rootActors[0].id, 'actor');
+        proliferate(window.rootActors[1].id, 'actor');
       }
     }
   )
@@ -255,36 +263,82 @@ function nodeNameKeyDown(e) {
 }
 
 //TODO: Make this generalised, taking title or actor
-function proliferate(actorId) {
-  console.log('proliferating');
-  $.post('cgi-bin/getShowsForActor.py',
-    {'actorId':actorId},
-    function(data) {
-      newTitleNodesToAdd = []
+function proliferate(id, type) {
+  console.log('proliferating with ', id, type);
+  if (type == 'actor') {
+    var actorId = id;
+    console.log('actorId is ' + actorId)
+    $.post('cgi-bin/getShowsForActor.py',
+      {'actorId':actorId},
+      function(data) {
+        var newTitleNodesToAdd = []
 
-      for (var index = 0; index<data.length; index++) {
-        elem = data[index]
-        if (window.titles[elem.titleId] == undefined) {
-          title = {'title':elem.title}
-          title['d0'] = window.NOT_CONNECTED
-          title['d1'] = window.NOT_CONNECTED
-          title['active'] = false
-          title['links'] = [{'actorId':actorId,'charName':elem.charName}]
-          window.titles[elem.titleId] = title
-        } else {
-          window.titles[elem.titleId]['links'].push({'actorId':actorId,'charName':elem.charName})
-        }
-        window.titles[elem.titleId]['d0'] = Math.min(window.titles[elem.titleId]['d0'], window.actors[actorId]['d0'] + 1)
-        window.titles[elem.titleId]['d1'] = Math.min(window.titles[elem.titleId]['d1'], window.actors[actorId]['d1'] + 1)
-        if (window.titles[elem.titleId]['d0'] != window.NOT_CONNECTED && window.titles[elem.titleId]['d1'] != window.NOT_CONNECTED) {
-          newTitleNodesToAdd.push(elem);
-        }
-      };
+        for (var index = 0; index<data.length; index++) {
+          elem = data[index]
+          if (window.titles[elem.titleId] == undefined) {
+            title = {'title':elem.title}
+            title['d0'] = window.NOT_CONNECTED
+            title['d1'] = window.NOT_CONNECTED
+            title['active'] = false
+            title['links'] = [{'actorId':actorId,'charName':elem.charName}]
+            title['titleId'] = elem.titleId
+            title['isNew'] = true;
+            window.titles[elem.titleId] = title
+          } else {
+            window.titles[elem.titleId]['links'].push({'actorId':actorId,'charName':elem.charName})
+          }
+          window.titles[elem.titleId]['d0'] = Math.min(window.titles[elem.titleId]['d0'], window.actors[actorId]['d0'] + 1)
+          window.titles[elem.titleId]['d1'] = Math.min(window.titles[elem.titleId]['d1'], window.actors[actorId]['d1'] + 1)
+          if (elem.titleId.substr(0,4) == '0303') {
+            console.log('with actorId ' + actorId + ', ', window.titles[elem.titleId])
+          }
+          if (window.titles[elem.titleId]['d0'] != window.NOT_CONNECTED && window.titles[elem.titleId]['d1'] != window.NOT_CONNECTED) {
+            newTitleNodesToAdd.push(elem);
+            console.log('pushed ' + elem + ' onto newTitleNodesToAdd')
+          }
+        };
+        addTitleNodes(newTitleNodesToAdd);
+        setTimeout(scanForNewNodesToProliferate, 1);
+      }
+    );
+    return false;
+  }
 
-      addTitleNodes(newTitleNodesToAdd);
+  if (type == 'title') {
+    titleId = id;
+    $.post('cgi-bin/getActorsForShow.py',
+      {'titleId':titleId},
+      function(data) {
+        var newActorNodesToAdd = []
 
-    }
-  );
+        for (var index = 0; index<data.length; index++) {
+          elem = data[index]
+          if (window.titles[elem.actorId] == undefined) {
+            actor = {'name':elem.name}
+            actor['d0'] = window.NOT_CONNECTED
+            actor['d1'] = window.NOT_CONNECTED
+            actor['active'] = false
+            actor['links'] = [{'titleId':titleId,'charName':elem.charName}]
+            actor['isNew'] = true;
+            window.actors[elem.actorId] = actor
+          } else {
+            window.actors[elem.actorId]['links'].push({'titleId':titleId,'charName':elem.charName})
+          }
+          window.actors[elem.actorId]['d0'] = Math.min(window.actors[elem.actorId]['d0'], window.titles[titleId]['d0'] + 1)
+          window.actors[elem.actorId]['d1'] = Math.min(window.actors[elem.actorId]['d1'], window.titles[titleId]['d1'] + 1)
+          if (window.actors[elem.actorId]['d0'] != window.NOT_CONNECTED && window.actors[elem.actorId]['d1'] != window.NOT_CONNECTED) {
+            newActorNodesToAdd.push(elem);
+          }
+        };
+        addActorNodes(newActorNodesToAdd);
+        setTimeout(scanForNewNodesToProliferate, 1);
+      }
+    );
+    return false;
+
+  }
+
+  alert('Unknown "type" passed to proliferate: ' + type);
 }
 
 function addTitleNodes(listOfTitleNodes) {
@@ -296,12 +350,11 @@ function addTitleNodes(listOfTitleNodes) {
         addTitleNode(listOfTitleNodes[i]);
         i++;
         addTitleNodesInner();
-      }, 300+Math.floor(Math.random()*200)); //TODO: Randomise pop=up interval
+      }, 300+Math.floor(Math.random()*200));
     }
   }
 
   addTitleNodesInner();
-  
 }
 
 function addTitleNode(title) {
@@ -313,6 +366,82 @@ function addTitleNode(title) {
     window.sys.getNode(nodeId).data.edges.push(edge);
     window.sys.getNode('actor_'+linkElem.actorId).data.edges.push(edge);
   });
+}
+
+function addActorNodes(listOfActorNodes) {
+  var i = 0;
+
+  function addActorNodesInner() {
+    if (i<listOfActorNodes.length) {
+      setTimeout(function() {
+        addActorNode(listOfActorNodes[i]);
+        i++;
+        addActorNodesInner();
+      }, 300+Math.floor(Math.random()*200));
+    }
+  }
+
+  addActorNodesInner();
+}
+
+function addActorNode(actor) {
+  window.actors[actor.actorId]['active'] = true
+  nodeId = 'actor_'+actor.actorId;
+  window.sys.addNode(nodeId, {color:'#f00',name:actor.name,originalColor:'#f00',originalW:3,edges:[]})
+  $.each(window.actors[actor.actorId]['links'], function(index, linkElem) {
+    edge = window.sys.addEdge(nodeId,'title_'+linkElem.titleId,{name:linkElem.charName})
+    window.sys.getNode(nodeId).data.edges.push(edge);
+    window.sys.getNode('title_'+linkElem.titleId).data.edges.push(edge);
+  });
+}
+
+function scanForNewNodesToProliferate() {
+  titleNodesToProliferate = []
+  actorNodesToProliferate = []
+  $.each(window.titles, function(key, value) {
+    if (value['isNew'] && (findMaxDegree(value) < window.MAXIMUM_DEGREE)) {
+      value['isNew'] = false;
+      titleNodesToProliferate.push(value);
+    }
+  });
+  $.each(window.actors, function(key, value) {
+    if (value['isNew'] && (findMaxDegree(value) < window.MAXIMUM_DEGREE)) {
+      value['isNew'] = false;
+      actorNodesToProliferate.push(value);
+    }
+  });
+  if (titleNodesToProliferate.length > 0 || actorNodesToProliferate.length > 0) {
+    proliferateNewNodes(titleNodesToProliferate, 'title');
+    proliferateNewNodes(actorNodesToProliferate, 'actor');
+    scanForNewNodesToProliferate();
+  }
+}
+
+function proliferateNewNodes(nodes, type) {
+  var i = 0;
+
+  function proliferateNewNodesInner() {
+    if (i<nodes.length) {
+      setTimeout(function() {
+        console.log('about to proliferate with ', nodes[i], type)
+        proliferate(nodes[i][type + 'Id'], type);
+        i++;
+        proliferateNewNodesInner();
+      }, 300 + Math.floor(Math.random()*200));
+    }
+  }
+
+  proliferateNewNodesInner()
+}
+
+function findMaxDegree(value) {
+  if (value['d0'] == window.MAXIMUM_DEGREE) {
+    if (value['d1'] == window.MAXIMUM_DEGREE) {return 0;}
+    else {return value['d1'];}
+  } else {
+    if (value['d1'] == window.MAXIMUM_DEGREE) {return value['d0'];}
+    else {return Math.max(value['d0'], value['d1']);}
+  }
 }
 
 function temporarilyHighlightNode(targetId) {
