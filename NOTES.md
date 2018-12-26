@@ -1,0 +1,1 @@
+Scratchpad of notes and thoughts that occurred to me throughout development

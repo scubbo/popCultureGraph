@@ -1,4 +1,3 @@
-import json
 import requests
 from bs4 import BeautifulSoup, NavigableString
 from string import Template
@@ -13,7 +12,7 @@ def get_actors_for_franchise(event, context):
 
     return {
         'statusCode': 200,
-        'body': json.dumps([_get_data_from_row(row) for row in rows if _row_is_an_actor_row(row)])
+        'body': [_get_data_from_row(row) for row in rows if _row_is_an_actor_row(row)]
     }
 
 
