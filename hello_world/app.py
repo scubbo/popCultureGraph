@@ -10,5 +10,5 @@ def get_actors_for_franchise(event, context):
 
     return {
         'statusCode': 200,
-        'body': json.dumps(fetcher.get_actors_for_franchise("2397535"))
+        'body': json.dumps(fetcher.get_actors_for_franchise(event['queryStringParameters']['id']))
     }
