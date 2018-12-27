@@ -3,11 +3,15 @@ import os, sys
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..'))
 import json
 
-from hello_world.app import get_actors_for_franchise
+from main.app import get_actors_for_franchise
 
 
 def test():
-    event = {}
+    event = {
+        'queryStringParameters': {
+            'id': '2397535'
+        }
+    }
     context = {}
-    response = json.loads(get_actors_for_franchise(event, context))
-    assert response['body'][0]['id'] == '0000160'
+    response = get_actors_for_franchise(event, context)
+    assert json.loads(response['body'])[0]['id'] == '0000160'

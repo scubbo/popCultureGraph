@@ -1,0 +1,19 @@
+version: 0.1
+phases:
+  install:
+    commands:
+      - pip install -r main/requirements.txt -t main
+      - pip install -r tests/requirements.txt -t .
+      - pip install -U pytest
+  pre_build:
+    commands:
+      - python -m pytest tests/
+  build:
+    commands:
+      - aws cloudformation package --template-file template.yaml --s3-bucket pop-culture-serverless-bucket
+                                   --output-template-file outputTemplate.yml
+
+artifacts:
+  type: zip
+  files:
+    - 'outputTemplate.yml'

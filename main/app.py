@@ -5,7 +5,6 @@ from lib.dataFetcher import DataFetcher
 
 
 def get_actors_for_franchise(event, context):
-    # TODO - dynamically get id from event
     fetcher = DataFetcher()
 
     return {
