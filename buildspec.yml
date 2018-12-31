@@ -12,6 +12,9 @@ phases:
     commands:
       - aws cloudformation package --template-file template.yaml --s3-bucket pop-culture-serverless-bucket
                                    --output-template-file outputTemplate.yml
+  post_build:
+    commands:
+      - aws s3 cp res/index.html s3://pop-culture-graph/index.html
 
 artifacts:
   type: zip
