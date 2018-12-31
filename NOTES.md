@@ -13,6 +13,8 @@ or helpful things to remember
 
 ## TODO
 
+* Specific unit-tests for DataFetcher, not just app-level 
+* `requests-mock` tests for DataFetcher
 * Make the bucket-name in buildspec.yml dynamic `{BUCKET-NAME}`, rather than hard-coded:
     like in [here](https://github.com/scubbo/scubbo-slackbot/blob/master/buildspec.yml#L13)
 * Deploy static website *in* a Deploy step, rather than during build
