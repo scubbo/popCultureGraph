@@ -16,3 +16,5 @@ or helpful things to remember
 * Make the bucket-name in buildspec.yml dynamic `{BUCKET-NAME}`, rather than hard-coded:
     like in [here](https://github.com/scubbo/scubbo-slackbot/blob/master/buildspec.yml#L13)
 * Deploy static website *in* a Deploy step, rather than during build
+* Framework to test locally (website calling local functions)
+* Notification when pipeline fails

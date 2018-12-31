@@ -1,0 +1,309 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  paramGithubRepo:
+    Type: String
+    Description: The GitHub Repo to pull into the Pipeline from
+  paramGithubUser:
+    Type: String
+    Description: The GitHub User
+  paramGithubOAuthToken:
+    Type: String
+    Description: OAuth Token for GitHub
+  paramProjectName:
+    Type: String
+    Description: Project Name - used for naming resources
+Resources:
+  PipelineBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Join
+      - ''
+      - - !Ref paramProjectName
+        - '-bucket'
+  PipelineRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+      Policies:
+        - PolicyName: PipelineRolePolicy
+          PolicyDocument:
+            Statement:
+              - Action:
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:GetBucketVersioning'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 's3:PutObject'
+                Resource:
+                  - 'arn:aws:s3:::codepipeline*'
+                  - 'arn:aws:s3:::elasticbeanstalk*'
+                Effect: Allow
+              - Action:
+                  - 'codecommit:CancelUploadArchive'
+                  - 'codecommit:GetBranch'
+                  - 'codecommit:GetCommit'
+                  - 'codecommit:GetUploadArchiveStatus'
+                  - 'codecommit:UploadArchive'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 'codedeploy:CreateDeployment'
+                  - 'codedeploy:GetApplicationRevision'
+                  - 'codedeploy:GetDeployment'
+                  - 'codedeploy:GetDeploymentConfig'
+                  - 'codedeploy:RegisterApplicationRevision'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 'elasticbeanstalk:*'
+                  - 'ec2:*'
+                  - 'elasticloadbalancing:*'
+                  - 'autoscaling:*'
+                  - 'cloudwatch:*'
+                  - 's3:*'
+                  - 'sns:*'
+                  - 'cloudformation:*'
+                  - 'rds:*'
+                  - 'sqs:*'
+                  - 'ecs:*'
+                  - 'iam:PassRole'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 'lambda:InvokeFunction'
+                  - 'lambda:ListFunctions'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 'opsworks:CreateDeployment'
+                  - 'opsworks:DescribeApps'
+                  - 'opsworks:DescribeCommands'
+                  - 'opsworks:DescribeDeployments'
+                  - 'opsworks:DescribeInstances'
+                  - 'opsworks:DescribeStacks'
+                  - 'opsworks:UpdateApp'
+                  - 'opsworks:UpdateStack'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 'cloudformation:CreateStack'
+                  - 'cloudformation:DeleteStack'
+                  - 'cloudformation:DescribeStacks'
+                  - 'cloudformation:UpdateStack'
+                  - 'cloudformation:CreateChangeSet'
+                  - 'cloudformation:DeleteChangeSet'
+                  - 'cloudformation:DescribeChangeSet'
+                  - 'cloudformation:ExecuteChangeSet'
+                  - 'cloudformation:SetStackPolicy'
+                  - 'cloudformation:ValidateTemplate'
+                  - 'iam:PassRole'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 'codebuild:BatchGetBuilds'
+                  - 'codebuild:StartBuild'
+                Resource: '*'
+                Effect: Allow
+            Version: 2012-10-17
+      Path: /
+      RoleName: !Join
+        - ''
+        - - !Ref paramProjectName
+          - '_pipeline-role'
+  CodeBuildRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/CloudWatchLogsFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
+      Path: /service-role/
+      RoleName: !Join
+        - ''
+        - - !Ref paramProjectName
+          - '_code-build-role'
+  CodeBuildProject:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        EnvironmentVariables: []
+        Image: 'aws/codebuild/python:3.6.5'
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      Name: !Join
+        - ''
+        - - !Ref paramProjectName
+          - '_code-build-project'
+      ServiceRole: !GetAtt
+        - CodeBuildRole
+        - Arn
+      Source:
+        Type: CODEPIPELINE
+      TimeoutInMinutes: 60
+  LambdaUpdateRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AWSLambdaExecute'
+      Path: /
+      Policies:
+        - PolicyName: !Join
+          - ''
+          - - !Ref paramProjectName
+            - '_lambda-update-policy'
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:GetBucketVersioning'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 's3:PutObject'
+                Resource: 'arn:aws:s3:::codepipeline*'
+                Effect: Allow
+              - Action:
+                  - 'lambda:*'
+                Resource: 'arn:aws:lambda:*'
+                Effect: Allow
+              - Action:
+                  - 'apigateway:*'
+                Resource: 'arn:aws:apigateway'
+                Effect: Allow
+              - Action:
+                  - 'iam:GetRole'
+                  - 'iam:CreateRole'
+                  - 'iam:DeleteRole'
+                Resource: !Join
+                  - ''
+                  - - 'arn:aws:iam::'
+                    - !Ref 'AWS::AccountId'
+                    - ':role/*'
+                Effect: Allow
+              - Action:
+                  - 'iam:AttachRolePolicy'
+                  - 'iam:DetachRolePolicy'
+                  - 'iam:PutRolePolicy'
+                Resource: !Join
+                  - ''
+                  - - 'arn:aws:iam::'
+                    - !Ref 'AWS::AccountId'
+                    - ':role/*'
+                Effect: Allow
+              - Action:
+                  - 'iam:PassRole'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 'cloudformation:CreateChangeSet'
+                Resource: !Join
+                  - ''
+                  - - 'arn:aws:cloudformation:'
+                    - !Ref 'AWS::Region'
+                    - ':aws:transform/Serverless-2016-10-31'
+                Effect: Allow
+  Pipeline:
+    Type: 'AWS::CodePipeline::Pipeline'
+    DependsOn:
+      - PipelineBucket
+      - PipelineRole
+    Properties:
+      ArtifactStore:
+        Type: S3
+        Location: !Ref PipelineBucket
+      Name: !Join
+        - ''
+        - - !Ref paramProjectName
+          - '_pipeline'
+      RoleArn: !GetAtt
+        - PipelineRole
+        - Arn
+      Stages:
+        - Name: Source
+          Actions:
+            - InputArtifacts: []
+              Name: Source
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: '1'
+                Provider: GitHub
+              OutputArtifacts:
+                - Name: !Ref paramProjectName
+              Configuration:
+                Owner: !Ref paramGithubUser
+                Repo: !Ref paramGithubRepo
+                Branch: master
+                OAuthToken: !Ref paramGithubOAuthToken
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - InputArtifacts:
+                - Name: !Ref paramProjectName
+              Name: CodeBuild
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              OutputArtifacts:
+                - Name: built
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              RunOrder: 1
+        - Name: Deploy
+          Actions:
+            - InputArtifacts:
+                - Name: built
+              Name: LambdaStackUpdate
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: '1'
+                Provider: CloudFormation
+              OutputArtifacts: []
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                ChangeSetName: LambdaChangeSet
+                RoleArn: !GetAtt
+                  - LambdaUpdateRole
+                  - Arn
+                Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND
+                StackName: !Join
+                  - ''
+                  - - !Ref paramProjectName
+                    - '-lambda-stack'
+                TemplatePath: 'built::outputTemplate.yml'
+              RunOrder: 1
+Outputs:
+  ArtifactsBucket:
+    Description: S3 bucket holding all the OutputArtifacts of any pipeline stage
+    Value: !Ref PipelineBucket
+    Export:
+      Name: pipeline-bucket
