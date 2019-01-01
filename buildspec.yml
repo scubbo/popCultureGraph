@@ -14,7 +14,8 @@ phases:
                                    --output-template-file outputTemplate.yml
   post_build:
     commands:
-      - aws s3 cp res/index.html s3://pop-culture-graph/index.html
+      - python buildStaticSiteContent.py --stage prod
+      - aws s3 cp built_resources/index.html s3://pop-culture-graph/index.html
 
 artifacts:
   type: zip
