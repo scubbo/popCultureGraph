@@ -10,6 +10,7 @@ fetcher = DataFetcher()
 def get_actors_for_franchise(event, context):
     return {
         'statusCode': 200,
+        'headers': {'Access-Control-Allow-Origin': 'http://pop-culture-graph.s3-website-us-east-1.amazonaws.com'},
         'body': json.dumps(fetcher.get_actors_for_franchise(event['queryStringParameters']['id']))
     }
 
@@ -17,5 +18,6 @@ def get_actors_for_franchise(event, context):
 def get_franchises_for_actor(event, context):
     return {
         'statusCode': 200,
+        'headers': {'Access-Control-Allow-Origin': 'http://pop-culture-graph.s3-website-us-east-1.amazonaws.com'},
         'body': json.dumps(fetcher.get_franchises_for_actor(event['queryStringParameters']['id']))
     }
