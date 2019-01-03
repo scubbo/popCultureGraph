@@ -17,10 +17,13 @@ BUILT_RESOURCES_DIRECTORY = 'built_resources'
 def main(args):
     if os.path.exists(BUILT_RESOURCES_DIRECTORY):
         shutil.rmtree(BUILT_RESOURCES_DIRECTORY)
-    os.mkdir(BUILT_RESOURCES_DIRECTORY)
 
-    with open(os.path.join(RESOURCES_SOURCE_DIRECTORY, 'index.html')) as index_input, \
-            open(os.path.join(BUILT_RESOURCES_DIRECTORY, 'index.html'), 'a') as index_output:
+    shutil.copytree(RESOURCES_SOURCE_DIRECTORY, BUILT_RESOURCES_DIRECTORY)
+
+    os.remove(os.path.join(BUILT_RESOURCES_DIRECTORY, 'js', 'main.js'))
+
+    with open(os.path.join(RESOURCES_SOURCE_DIRECTORY, 'js', 'main.js')) as index_input, \
+            open(os.path.join(BUILT_RESOURCES_DIRECTORY, 'js', 'main.js'), 'a') as index_output:
         index_output.write(index_input.read().replace('{API_PREFIX}', STAGES[args.stage]['api_prefix']))
 
 

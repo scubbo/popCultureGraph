@@ -1,28 +1,67 @@
 <html>
-
 <head>
-    <script
+  <meta charset="utf-8"/>
+  <script
       src="https://code.jquery.com/jquery-2.2.4.min.js"
       integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
       crossorigin="anonymous"></script>
-    <script>
-        $(document).ready(function() {
-            console.log('hello!');
-            $('#magicButton').click(function() {
-                $.get(
-                    '{API_PREFIX}/get_actors_for_franchise?id=2397535',
-                    function(data) {
-                        console.log(data);
-                    }
-                )
-            });
-        });
-    </script>
+  <script src="js/arbor.js"></script>
+  <script src="js/arbor-tween.js"></script>
+
+  <script src="js/main.js"></script>
+
+  <link rel="stylesheet" href="css/main.css"/>
 </head>
 
 <body>
-Hello! This was pushed by the CodeBuild process!
-<button id="magicButton">I am a button</button>
+
+<div id="initialInputDiv">
+  <h1 id="initialInputHeading">The Fantheon</h1>
+  <div id="innerInputDiv">
+    <span>Enter the name of an Actor/Actress, TV show, or Movie</span>
+    <br/>
+    <input id="nameInput" type="text" placeholder="Name" />
+    <select id="inputType">
+        <option value="actor">Actor/Actress</option>
+        <option value="title">TV Show/Movie</option>
+    </select>
+    <input id="enter" type="button" value="Go" />
+    <span id="waitForIt">Wait for it...</span>
+  </div>
+  <span id="disclaimer">With apologies to <a href="http://wicdiv.wikia.com/wiki/Fantheon">Kieron Gillen</a> for stealing his awesome name.<br/>If you haven't already, go read <a href="https://en.wikipedia.org/wiki/The_Wicked_%2B_The_Divine">WicDiv</a> IMMEDIATELY.</span>
+</div>
+
+<div id="playDiv">
+  <div id="topDiv">
+    <a id="whatLink" class="nonLinkingA" href="#">What?</a>
+    <div id="whatDiv" class="hiddenDiv">
+      <h2>What do I do?</h2>
+      <p>Drag Mode lets you click-and-drag any node to move it around.</p>
+      <p>Spread Mode lets you click a node to generate more links from it (this may take a few seconds if you're exploring connections no-one has explored before). You can click the same node more than once for more links!</p>
+      <p>Delete Mode lets you delete a node, if things are getting too crowded.</p>
+      <p>Prune Mode does the same as Delete Mode, but also submits a request to completely remove the node from the database. Use this for boring titles like talk shows, clip shows, and the like. (If you're technically-inclined, you can also submit a Pull Request to change <a href="https://github.com/scubbo/popCultureGraph2/blob/master/src/main/java/org/scubbo/popculturegraph/Parser.java">this class</a>).</p>
+    </div>
+
+    <select id="mode">
+      <option selected value="drag">Drag Mode</option>
+      <option value="spread">Spread Mode</option>
+      <option value="delete">Delete Mode</option>
+      <option value="prune">Prune Mode</option>
+    </select>
+
+    <a id="whoLink" class="nonLinkingA" href="#">Who?</a>
+    <div id="whoDiv" class="hiddenDiv">
+      <h2>Who made this?</h2>
+      <p>This was made by Jack Jackson, with great thanks to George Lockett and Olivia DuBois for inspiration and support</p>
+      <p>Any feedback gratefully received via <a href="https://twitter.com/scubbo">Twitter</a> or <a href="mailto:scubbojj@gmail.com">Email</a></p>
+    </div>
+  </div>
+
+  <br/>
+
+  <canvas id="viewport" width="1200" height="750"></canvas>
+</div>
+
 </body>
 
 </html>

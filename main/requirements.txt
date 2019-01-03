@@ -2,3 +2,5 @@ requests
 boto3
 BeautifulSoup4
 lxml
+# responses is used just to allow a local-only server. I'd love to hear of a better way!
+responses

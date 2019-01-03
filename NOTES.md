@@ -16,6 +16,9 @@ or helpful things to remember
 *** `IMPORTING` contained the same content (at a skim - specifically, it contained the same "The details of the first step..." section) as `help(import)`
 *** `MODULES` only contained information for interacting with (already-imported) modules
 *** `PACKAGES` containes the same content as `help(import)` and `IMPORTING`
+* I'm really lacking a neat way of referencing a common root (such that a test runs with the same relative working dir
+    whether run from PyCharm or from `pytest .`). A variable like `package-root` would be useful (probably exists, I just
+    haven't looked it up yet)
 
 ## TODO
 
@@ -26,3 +29,15 @@ or helpful things to remember
 * Deploy static website *in* a Deploy step, rather than during build
 * Framework to test locally (website calling local functions)
 * Notification when pipeline fails
+* Rewrite from line 313-onwards of main.js, which handles responses from clicking nodes in spread mode. Update to match
+    the current data-format (and/or update the data-format to be more helpful - might be nice to make the responses
+    statelessly-consumable, without requiring the client to track that!)
+* Do not duplicate existing linked-nodes (probably requires passing a list of "nodes to suppress" into the functions)
+* franchises_for_actor for Alison Brie (1555340) is returning empty
+    ditto Zoe Saldana
+* Many incorrect character-name parsings (e.g. `)` as a character name of Charlie Day)
+    Also Will Arnett has two "Riviera" entries
+* Clicking a node N_1 that's already connected to a node N_2 will reset the chunkNum of N_2
+* When pruning, also remove all leaves
+* Clicking spread one one node, then on another one quickly afterwards (before completion) leads to the resulting three
+    nodes being "linked" to nothing

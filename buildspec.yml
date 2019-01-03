@@ -15,7 +15,7 @@ phases:
   post_build:
     commands:
       - python buildStaticSiteContent.py --stage prod
-      - aws s3 cp built_resources/index.html s3://pop-culture-graph/index.html
+      - aws s3 sync built_resources/ s3://pop-culture-graph/
 
 artifacts:
   type: zip
