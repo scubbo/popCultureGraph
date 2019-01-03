@@ -10,6 +10,12 @@ or helpful things to remember
     but I'd be interested to know the best solution for if the static website needed
     to reference a Cloudformation Stack Output (presumably - "it shouldn't, just have it
     call some backend service that references the Stack Output")
+* The documentation on how importing works in Python is lacking (or, I can't find it):
+** `help();help(import)` gives `The details of the first step, finding and loading modules are described in greater detail in the section on the import system`.
+** `help();topics` lists several topics that look potentially helpful: `IMPORTING`, `MODULES`, `PACKAGES`
+*** `IMPORTING` contained the same content (at a skim - specifically, it contained the same "The details of the first step..." section) as `help(import)`
+*** `MODULES` only contained information for interacting with (already-imported) modules
+*** `PACKAGES` containes the same content as `help(import)` and `IMPORTING`
 
 ## TODO
 
