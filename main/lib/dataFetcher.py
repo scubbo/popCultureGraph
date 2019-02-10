@@ -49,12 +49,20 @@ class DataFetcher(object):
 
     def _get_data_from_actor_row(self, row):
         actor_link = self._get_actor_link_from_row(row)
+        char_name = self._get_char_name_from_actor_row(row)
         return {
             'id': actor_link['href'].split('/')[2][2:],
             'name': str(actor_link.contents[0]).strip(),
             # TODO - this probably needs tweaking to remove noise like "(uncredited)"
-            'char_name': str(row.select('td.character')[0].contents[0]).strip()
+            'char_name': char_name
         }
+
+    def _get_char_name_from_actor_row(self, row):
+        tag = next(s for s in row.select('td.character')[0].contents if str(s).strip())
+        try:
+            return tag.contents[0].strip()
+        except Exception:
+            return str(tag).strip()
 
     def _get_data_from_franchise_row(self, row):
         franchise_link = self._get_franchise_link_from_row(row)
@@ -94,10 +102,7 @@ class DataFetcher(object):
 
     @staticmethod
     def _get_char_name_from_franchise_row(row):
-        # Return the stripped-string of the 2nd child with non-whitespace contents
-        non_whitespace_children =\
-            [child for child in row.children if type(child) == NavigableString and not child.string.isspace()]
         try:
-            return non_whitespace_children[1].string.strip()
+            return [child for child in row.children if type(child) == NavigableString][-1].strip()
         except IndexError:
             return ''
