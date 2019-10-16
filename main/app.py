@@ -5,9 +5,18 @@ import responses
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__))))
 from lib.dataFetcher import DataFetcher
 
+print('DEBUG 1')
+#log.info('DEBUG 2')
+import ptvsd
+print('DEBUG 3')
+#log.info('DEBUG 4')
+
+# Enable ptvsd on 0.0.0.0 address and on port 5858 that we'll connect later with our IDE
+ptvsd.enable_attach(address=('0.0.0.0', 5858), redirect_output=True)
 
 class App(object):
     def __init__(self, fetcher=None):
+        print('DEBUG inside App')
         if not fetcher:
             fetcher = DataFetcher()
         self._fetcher = fetcher
@@ -23,6 +32,10 @@ class App(object):
         ))
 
     def get_franchises_for_actor(self, event, context):
+        print('DEBUG before the attach')
+        ptvsd.wait_for_attach()
+        print('Debug after the attach')
+        print('There is a breakpoint before this, so it should stop')
         return self._build_response(json.dumps(
             self._fetcher.get_franchises_for_actor(
                 event['queryStringParameters']['id'],
@@ -126,5 +139,5 @@ def _setup_responses():
         content_type='application/json'
     )
 
-
+print('DEBUG 5')
 app = App()
